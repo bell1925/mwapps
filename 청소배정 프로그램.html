@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우리반 청소 배정기 ✨</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- 귀여운 웹 폰트 적용 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&family=Nunito:wght@400;700&display=swap');
+        @font-face {
+            font-family: 'NanumSquareRound';
+            src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_two@1.0/NanumSquareRound.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        body { font-family: 'NanumSquareRound', sans-serif; background-color: #F8F9FA; }
+        .title-font { font-family: 'Jua', sans-serif; }
+
+        /* 탭 버튼 디자인 */
+        .tab-btn { font-family: 'Jua', sans-serif; font-size: 1.2rem; color: #ADB5BD; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #457B9D; border-bottom: 3px solid #A2D2FF; }
+
+        /* 결과표 (평상시) 디자인 */
+        .cute-table { width: 100%; border-collapse: separate; border-spacing: 0; border: 2px solid #A2D2FF; border-radius: 16px; background-color: white; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+        .cute-table th { background-color: #A2D2FF; color: #1D3557; font-family: 'Jua', sans-serif; font-size: 1.2rem; padding: 12px; text-align: center; }
+        .cute-table td { border-top: 1px dashed #BDE0FE; border-right: 1px dashed #BDE0FE; padding: 10px; text-align: center; vertical-align: middle; }
+        .cute-table td:last-child, .cute-table th:last-child { border-right: none; }
+
+        /* 선택 박스 디자인 */
+        .cute-select { border: 2px solid #E9ECEF; background-color: #FFFFFF; border-radius: 12px; padding: 4px 8px; text-align: center; font-size: 1rem; font-family: 'NanumSquareRound', sans-serif; cursor: pointer; transition: all 0.2s ease; width: 100%; max-width: 105px; color: #495057; margin: 2px; }
+        .cute-select:hover, .cute-select:focus { border-color: #A2D2FF; outline: none; }
+        
+        /* ⚠️ 중복 발생 시 선택 박스 강조 스타일 */
+        .cute-select.has-duplicate { 
+            border-color: #EF4444 !important; 
+            background-color: #FEE2E2 !important; 
+            color: #B91C1C !important;
+            font-weight: bold;
+            animation: pulse-border 1.5s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2); }
+        }
+
+        /* 🖨️ PDF 인쇄용 디자인 (잘림 방지 및 A4 비율 최적화) */
+        .pdf-mode { 
+            width: 1200px !important; 
+            padding: 50px !important; 
+            background-color: #FDFBF7 !important; 
+            background-image: radial-gradient(#BDE0FE 2px, transparent 2px) !important; 
+            background-size: 30px 30px !important; 
+            box-sizing: border-box; 
+            border-radius: 0; 
+        }
+        .pdf-mode #result-title { font-size: 3.5rem !important; color: #1D3557 !important; text-shadow: 2px 2px 0px #A2D2FF; margin-bottom: 40px !important; display: block !important; }
+        .pdf-mode .cute-table { border: 3px solid #A2D2FF; background-color: rgba(255, 255, 255, 0.95); }
+        .pdf-mode .cute-table th { font-size: 1.6rem; padding: 18px; }
+        .pdf-mode .cute-table td { font-size: 1.2rem; padding: 15px; }
+        .pdf-mode .cute-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; border: none !important; background: #FFC8DD !important; color: #791136 !important; pointer-events: none; font-weight: bold; border-radius: 20px; box-shadow: 2px 2px 0px #FFAFCC !important; max-width: none; display: inline-block; padding: 8px 14px; font-size: 1.1rem;}
+        
+        /* ⭐️ 저작권 문구 및 실시간 안내창: PDF 모드에서는 숨김 처리 */
+        .pdf-mode .copyright-text, .pdf-mode #status-panel { display: none !important; }
+
+        /* 스크롤바 꾸미기 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #A2D2FF; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #457B9D; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 relative">
+        <h1 class="text-4xl text-center mb-8 title-font text-[#1D3557]">✨ 우리반 청소 배정기 ✨</h1>
+
+        <div class="flex justify-center mb-8 gap-4">
+            <button id="tab-daily" class="tab-btn active px-6 py-2 transition" onclick="switchTab('daily')">🧹 하루 대청소</button>
+            <button id="tab-weekly" class="tab-btn px-6 py-2 transition" onclick="switchTab('weekly')">📅 한 학기 요일별</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-blue-50/50 p-6 rounded-2xl">
+            <div>
+                <label class="block text-base font-bold mb-2 text-[#457B9D]">👩‍🎓 학생 명단 (쉼표 또는 줄바꿈 구분)</label>
+                <textarea id="students-input" class="w-full border-2 border-[#BDE0FE] p-3 rounded-xl h-32 focus:border-[#A2D2FF] focus:outline-none" placeholder="예: 1번, 2번, 3번... 또는 홍길동, 김철수..."></textarea>
+            </div>
+            <div>
+                <label class="block text-base font-bold mb-2 text-[#457B9D]">🧽 청소 구역 및 인원 (구역-인원수)</label>
+                <textarea id="areas-input" class="w-full border-2 border-[#BDE0FE] p-3 rounded-xl h-32 focus:border-[#A2D2FF] focus:outline-none" placeholder="예: 칠판-2, 바닥-4, 복도-3, 분리수거 (인원 미기재 시 1명)"></textarea>
+            </div>
+        </div>
+
+        <div class="flex justify-center space-x-4 mb-8">
+            <button onclick="generateAssignment()" class="bg-[#A2D2FF] hover:bg-[#8bbff0] text-[#1D3557] title-font text-xl py-3 px-8 rounded-2xl shadow-sm transition transform hover:scale-105">
+                🎲 랜덤 배정하기
+            </button>
+            <button onclick="saveAsPDF()" class="bg-[#FFAFCC] hover:bg-[#ff9cbf] text-[#791136] title-font text-xl py-3 px-8 rounded-2xl shadow-sm transition transform hover:scale-105">
+                🖨️ 예쁘게 PDF 저장
+            </button>
+        </div>
+
+        <div class="overflow-x-auto bg-gray-50 rounded-2xl p-4">
+            <div id="print-area" class="transition-all duration-300 inline-block min-w-full">
+                <h2 id="result-title" class="text-3xl text-center mb-6 title-font hidden">청소 배정 결과</h2>
+                <div id="result-container">
+                    <p class="text-center text-gray-400 py-10 font-bold">학생 명단과 구역을 입력하고 '랜덤 배정하기'를 눌러주세요! 🪄</p>
+                </div>
+
+                <!-- 📌 실시간 중복 및 미배정 알림 현황판 -->
+                <div id="status-panel" class="mt-4 space-y-2"></div>
+                
+                <!-- 저작권 문구 -->
+                <div class="text-center text-xs text-gray-400 mt-8 copyright-text font-bold">Copyright © 김주은</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'daily';
+        
+        function switchTab(mode) {
+            currentMode = mode;
+            document.getElementById('tab-daily').classList.remove('active');
+            document.getElementById('tab-weekly').classList.remove('active');
+            document.getElementById(`tab-${mode}`).classList.add('active');
+            document.getElementById('result-container').innerHTML = '<p class="text-center text-gray-400 py-10 font-bold">학생 명단과 구역을 입력하고 랜덤 배정을 다시 실행해주세요! 🪄</p>';
+            document.getElementById('result-title').classList.add('hidden');
+            document.getElementById('status-panel').innerHTML = '';
+        }
+
+        function parseStudents(id) {
+            return document.getElementById(id).value.split(/[\n,]+/).map(s => s.trim()).filter(s => s !== '');
+        }
+
+        function parseAreas(id) {
+            return document.getElementById(id).value.split(/[\n,]+/).map(s => s.trim()).filter(s => s !== '').map(item => {
+                const match = item.match(/^(.*?)[-:]\s*(\d+)$/);
+                if (match) return { name: match[1].trim(), capacity: parseInt(match[2], 10) };
+                return { name: item, capacity: 1 };
+            });
+        }
+
+        function shuffle(array) {
+            const arr = [...array];
+            let currentIndex = arr.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [arr[currentIndex], arr[randomIndex]] = [arr[randomIndex], arr[currentIndex]];
+            }
+            return arr;
+        }
+
+        function createSelectBox(students, selectedStudent, dayGroup = 'all') {
+            const uniqueList = Array.from(new Set(students)).sort((a, b) => a.localeCompare(b, 'ko', { numeric: true }));
+            let html = `<select class="cute-select assignment-select" data-day="${dayGroup}" onchange="validateAssignments()">`;
+            html += `<option value="">(비어있음)</option>`;
+            uniqueList.forEach(s => {
+                const isSelected = s === selectedStudent ? 'selected' : '';
+                html += `<option value="${s}" ${isSelected}>${s}</option>`;
+            });
+            html += `</select>`;
+            return html;
+        }
+
+        // 💡 요일별/대청소별 각 단위(하루)마다 '중복'과 '빠진 학생'을 실시간 검증
+        function validateAssignments() {
+            const originalStudents = parseStudents('students-input');
+            const selects = Array.from(document.querySelectorAll('.assignment-select'));
+            if (selects.length === 0) return;
+
+            // 1. 기존 에러 강조 초기화
+            selects.forEach(sel => sel.classList.remove('has-duplicate'));
+
+            const statusPanel = document.getElementById('status-panel');
+            const targetDays = currentMode === 'daily' ? ['all'] : ['월요일', '화요일', '수요일', '목요일', '금요일'];
+            
+            const duplicateMessages = [];
+            const unassignedMessages = [];
+
+            // 2. 각 그룹(하루 대청소 또는 각 요일)별로 개별 전수 검사
+            targetDays.forEach(day => {
+                const daySelects = selects.filter(sel => sel.getAttribute('data-day') === day);
+                const countMap = {};
+                const dayAssignedSet = new Set();
+
+                daySelects.forEach(sel => {
+                    const val = sel.value;
+                    if (val) {
+                        dayAssignedSet.add(val);
+                        countMap[val] = (countMap[val] || 0) + 1;
+                    }
+                });
+
+                // (1) 해당 요일 내 중복 학생 검사
+                const dayDups = Object.keys(countMap).filter(val => countMap[val] > 1);
+                const dayLabel = currentMode === 'daily' ? '오늘 대청소' : day;
+
+                if (dayDups.length > 0) {
+                    daySelects.forEach(sel => {
+                        if (dayDups.includes(sel.value)) {
+                            sel.classList.add('has-duplicate');
+                        }
+                    });
+                    duplicateMessages.push(`<b>[${dayLabel}]</b> ${dayDups.join(', ')}`);
+                }
+
+                // (2) 해당 요일에 빠진(미배정된) 학생 검사
+                const dayMissing = originalStudents.filter(s => !dayAssignedSet.has(s));
+                if (dayMissing.length > 0) {
+                    unassignedMessages.push(`<b>[${dayLabel}]</b> ${dayMissing.join(', ')} (${dayMissing.length}명 미배정)`);
+                }
+            });
+
+            // 3. 상태 패널 알림 UI 구성
+            let panelHtml = '';
+
+            // 중복 알림 (빨간색)
+            if (duplicateMessages.length > 0) {
+                panelHtml += `
+                    <div class="p-3 bg-red-100 border border-red-300 text-red-700 rounded-xl text-sm font-bold flex items-start gap-2 shadow-sm">
+                        <span class="text-lg">🚨</span>
+                        <div>
+                            <div class="font-extrabold text-base mb-1">중복 배정된 친구가 있어요! (빨간색 칸 확인)</div>
+                            <div class="space-y-1 font-normal text-red-900">${duplicateMessages.join('<br>')}</div>
+                        </div>
+                    </div>`;
+            }
+
+            // 미배정 알림 (주황색)
+            if (unassignedMessages.length > 0) {
+                const titleText = currentMode === 'daily' ? '아직 배정되지 않은 친구들이 있어요!' : '각 요일별로 아직 안 들어간 친구들이 있어요!';
+                panelHtml += `
+                    <div class="p-3 bg-amber-50 border border-amber-300 text-amber-800 rounded-xl text-sm font-bold flex items-start gap-2 shadow-sm">
+                        <span class="text-lg">💡</span>
+                        <div>
+                            <div class="font-extrabold text-base mb-1">${titleText}</div>
+                            <div class="space-y-1 font-normal text-amber-950">${unassignedMessages.join('<br>')}</div>
+                        </div>
+                    </div>`;
+            }
+
+            // 중복도 없고 빠진 사람도 없을 때 (녹색 완료)
+            if (duplicateMessages.length === 0 && unassignedMessages.length === 0) {
+                const completeText = currentMode === 'daily' 
+                    ? '모든 학생이 중복 없이 완벽하게 배정되었습니다!' 
+                    : '월~금 모든 요일에 전원이 빠짐없이 중복 없이 배정되었습니다! 🎉';
+                panelHtml += `
+                    <div class="p-3 bg-green-100 border border-green-300 text-green-800 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm">
+                        <span class="text-lg">🎉</span>
+                        <div>${completeText}</div>
+                    </div>`;
+            }
+
+            statusPanel.innerHTML = panelHtml;
+        }
+
+        function generateAssignment() {
+            const originalStudents = parseStudents('students-input');
+            const areas = parseAreas('areas-input');
+
+            if (originalStudents.length === 0 || areas.length === 0) {
+                alert("학생 명단과 청소 구역을 모두 입력해주세요.");
+                return;
+            }
+
+            const container = document.getElementById('result-container');
+            let html = '';
+
+            document.getElementById('result-title').innerText = currentMode === 'daily' ? '✨ 오늘의 대청소 배정표 ✨' : '📅 이번 학기 요일별 청소표 📅';
+            document.getElementById('result-title').classList.remove('hidden');
+
+            if (currentMode === 'daily') {
+                const students = shuffle(originalStudents);
+                html = `<table class="cute-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30%;">청소 구역</th>
+                                    <th>우리반 청소 특공대 🦸‍♂️🦸‍♀️</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                
+                areas.forEach(area => {
+                    html += `<tr>
+                                <td class="font-bold text-lg text-[#1D3557]">${area.name} <br><span class="text-sm font-normal text-blue-500">(${area.capacity}명)</span></td>
+                                <td>
+                                    <div class="flex flex-wrap gap-2 justify-center">`;
+                    for(let i = 0; i < area.capacity; i++) {
+                        const s = students.length > 0 ? students.pop() : ""; 
+                        html += `<div>${createSelectBox(originalStudents, s, 'all')}</div>`;
+                    }
+                    html += `</div></td></tr>`;
+                });
+                html += `</tbody></table>`;
+
+            } else {
+                const days = ['월요일', '화요일', '수요일', '목요일', '금요일'];
+                const numDays = days.length;
+                
+                // grid[areaIndex][dayIndex] = [학생1, 학생2, ...]
+                const grid = areas.map(() => Array.from({ length: numDays }, () => []));
+
+                // 💡 핵심: 매 요일마다 '전체 학생 목록'을 새로 셔플하여 해당 요일 청소 구역들에 순서대로 배정
+                days.forEach((day, d) => {
+                    const dailyPool = shuffle(originalStudents);
+                    areas.forEach((area, areaIdx) => {
+                        for (let c = 0; c < area.capacity; c++) {
+                            const chosenStudent = dailyPool.length > 0 ? dailyPool.pop() : "";
+                            grid[areaIdx][d].push(chosenStudent);
+                        }
+                    });
+                });
+
+                html = `<table class="cute-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">구역 (인원)</th>`;
+                days.forEach(day => html += `<th style="width: 17%;">${day}</th>`);
+                html += `</tr></thead><tbody>`;
+
+                areas.forEach((area, areaIdx) => {
+                    html += `<tr>
+                                <td class="font-bold text-[#1D3557]">${area.name}<br><span class="text-sm font-normal text-blue-500">(${area.capacity}명)</span></td>`;
+                    days.forEach((day, d) => {
+                        html += `<td class="align-top">
+                                    <div class="flex flex-col gap-2 items-center">`;
+                        grid[areaIdx][d].forEach(studentName => {
+                            html += createSelectBox(originalStudents, studentName, day);
+                        });
+                        html += `</div></td>`;
+                    });
+                    html += `</tr>`;
+                });
+                html += `</tbody></table>`;
+            }
+
+            container.innerHTML = html;
+            
+            // 배정 직후 각 요일별 누락 및 중복 체크 즉시 수행
+            validateAssignments();
+        }
+
+        // PDF 자동 맞춤 
+        function saveAsPDF() {
+            const printArea = document.getElementById('print-area');
+            if (document.getElementById('result-container').innerHTML.includes('랜덤 배정하기') || document.getElementById('result-container').innerHTML.includes('다시 실행해주세요')) {
+                alert('먼저 랜덤 배정하기를 실행해주세요!');
+                return;
+            }
+
+            // PDF 전용 디자인 클래스 부여 (저작권 문구 및 실시간 알림창 자동 숨김)
+            printArea.classList.add('pdf-mode');
+
+            setTimeout(() => {
+                const { jsPDF } = window.jspdf;
+                
+                html2canvas(printArea, { scale: 2, useCORS: true, backgroundColor: '#FDFBF7' }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                    
+                    const pdf = new jsPDF('landscape', 'mm', 'a4');
+                    const pdfWidth = 297; 
+                    const pdfHeight = 210;
+                    
+                    const imgWidthRaw = canvas.width;
+                    const imgHeightRaw = canvas.height;
+                    const ratio = imgWidthRaw / imgHeightRaw;
+                    
+                    let finalImgWidth = pdfWidth;
+                    let finalImgHeight = pdfWidth / ratio;
+                    
+                    if (finalImgHeight > pdfHeight) {
+                        finalImgHeight = pdfHeight;
+                        finalImgWidth = pdfHeight * ratio;
+                    }
+                    
+                    const x = (pdfWidth - finalImgWidth) / 2;
+                    const y = (pdfHeight - finalImgHeight) / 2;
+                    
+                    pdf.addImage(imgData, 'JPEG', x, y, finalImgWidth, finalImgHeight);
+                    const filename = currentMode === 'daily' ? '우리반_대청소_배정표.pdf' : '우리반_요일별_청소표.pdf';
+                    pdf.save(filename);
+                    
+                    // 원상 복구
+                    printArea.classList.remove('pdf-mode');
+                });
+            }, 100);
+        }
+    </script>
+</body>
+</html>

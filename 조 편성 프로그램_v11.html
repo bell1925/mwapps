@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>스마트 조 편성 프로그램</title>
+  <!-- 프리텐다드 폰트 적용 -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <!-- 엑셀 파싱 및 다운로드용 SheetJS 라이브러리 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --accent: #6366f1;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --border-subtle: #f1f5f9;
+      --text-main: #0f172a;
+      --text-sub: #64748b;
+      --male-bg: #eff6ff;
+      --male-color: #2563eb;
+      --female-bg: #fdf2f8;
+      --female-color: #db2777;
+      --radius: 16px;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    }
+
+    * { box-sizing: border-box; font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text-main); margin: 0; padding: 32px 16px; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 32px; }
+    .header-badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 9999px; background: var(--primary-light); color: var(--primary); font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; }
+    header h1 { margin: 0 0 10px 0; font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; color: #1e1b4b; }
+    header p { margin: 0; color: var(--text-sub); font-size: 1rem; }
+
+    .card { background: var(--card-bg); border-radius: var(--radius); padding: 24px 28px; box-shadow: var(--shadow-sm); margin-bottom: 24px; border: 1px solid var(--border); transition: box-shadow 0.2s; }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 16px; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+    .card-title { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+
+    .upload-zone {
+      border: 2px dashed #cbd5e1; border-radius: 12px; padding: 24px; text-align: center; background: #fcfcfd;
+      cursor: pointer; margin-bottom: 16px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .upload-zone:hover { border-color: var(--accent); background: #f8faff; transform: translateY(-1px); }
+    .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+    .upload-zone p { margin: 0 0 6px 0; font-weight: 700; font-size: 1rem; color: var(--text-main); }
+    .upload-zone small { color: var(--text-sub); font-size: 0.85rem; }
+
+    .btn-group { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    input, select, textarea, button { border-radius: 10px; border: 1px solid var(--border); font-size: 0.92rem; outline: none; transition: all 0.15s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+    input, select, textarea { padding: 10px 12px; width: 100%; }
+
+    button { background-color: var(--primary); color: white; border: none; cursor: pointer; font-weight: 600; padding: 10px 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+    button:hover { background-color: var(--primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    button:active { transform: translateY(0); }
+    button.secondary { background-color: #f1f5f9; color: var(--text-main); border: 1px solid var(--border); }
+    button.secondary:hover { background-color: #e2e8f0; }
+    button.excel-btn { background-color: #10b981; }
+    button.excel-btn:hover { background-color: #059669; }
+    button.danger-btn { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    button.danger-btn:hover { background-color: #fecaca; }
+    button.toggle-btn { background-color: #f59e0b; }
+    button.toggle-btn:hover { background-color: #d97706; }
+    button.sm-btn { padding: 4px 10px; font-size: 0.8rem; border-radius: 6px; }
+
+    .toolbar-box { background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .toolbar-label { font-size: 0.85rem; font-weight: 700; color: var(--text-sub); }
+    .tool-chip { background: white; border: 1px solid var(--border); padding: 6px 12px; font-size: 0.82rem; border-radius: 8px; font-weight: 600; cursor: pointer; color: var(--text-main); }
+    .tool-chip:hover { background: #eef2ff; border-color: #c7d2fe; color: var(--primary); }
+    .tool-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .student-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.88rem; }
+    .student-table th { background: #f8fafc; color: var(--text-sub); font-weight: 700; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+    .student-table td { padding: 8px; text-align: center; border-bottom: 1px solid var(--border-subtle); }
+    .student-table tbody tr:hover { background-color: #fbfcfe; }
+    .edit-row input, .edit-row select { padding: 4px 8px; font-size: 0.85rem; }
+
+    .badge-gender { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; }
+    .gender-m { background: var(--male-bg); color: var(--male-color); }
+    .gender-f { background: var(--female-bg); color: var(--female-color); }
+
+    .leader-config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .leader-box { border: 1px solid #e0e7ff; padding: 14px; border-radius: 12px; background: #fafbff; transition: border-color 0.2s, background-color 0.2s; }
+    .leader-box.error-highlight { border: 2px solid #ef4444 !important; background-color: #fff5f5 !important; }
+    .leader-box h4 { margin: 0 0 10px 0; color: var(--primary); font-size: 0.95rem; font-weight: 700; display: flex; justify-content: space-between; }
+    .leader-box label { font-size: 0.8rem; font-weight: 600; color: var(--text-sub); margin-bottom: 4px; display: block; }
+    .leader-box select { margin-bottom: 8px; }
+    select option:disabled { background-color: #f1f5f9; color: #94a3b8; font-style: italic; }
+
+    .action-bar { display: flex; gap: 12px; margin: 24px 0 8px 0; flex-wrap: wrap; }
+    .action-bar button { padding: 14px 18px; font-size: 0.98rem; flex: 1 1 190px; border-radius: 12px; }
+    #btnGenerateTeam { flex: 1.3 1 220px; font-size: 1.05rem; }
+    .action-hint { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 24px; text-align: center; }
+
+    .segmented-control { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; width: fit-content; margin-bottom: 20px; }
+    .segment-btn { background: transparent; color: var(--text-sub); border: none; padding: 8px 20px; font-size: 0.92rem; font-weight: 700; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+    .segment-btn.active { background: white; color: var(--primary); box-shadow: var(--shadow-sm); }
+
+    .teams-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+    .team-card { background: white; border-radius: 14px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); overflow: hidden; }
+    .team-card-header { background: #fafbff; padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .team-title { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--primary); }
+    .team-stats-pill { font-size: 0.78rem; font-weight: 600; color: var(--text-sub); background: white; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); }
+    .team-card-body { padding: 12px 16px; }
+    .member-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); }
+    .member-item:last-child { border-bottom: none; }
+    .tag { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+    .tag-leader { background: #fef3c7; color: #b45309; }
+    .tag-pick { background: #e0e7ff; color: #3730a3; }
+
+    @page { size: auto; margin: 12mm; }
+    @media print {
+      html, body { background: white !important; margin: 0 !important; padding: 0 !important; height: 100%; width: 100%; }
+      .no-print { display: none !important; }
+      body { display: flex !important; justify-content: center !important; align-items: center !important; min-height: 100vh !important; }
+      .container { width: 100% !important; max-width: 100% !important; margin: auto !important; padding: 0 !important; }
+      .card { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 auto !important; width: 100% !important; }
+      .tab-content { display: none; }
+      .tab-content.active-print { display: block !important; width: 100% !important; }
+      .teams-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 12px !important; justify-content: center !important; }
+      .team-card { border: 1px solid #94a3b8 !important; border-radius: 8px !important; page-break-inside: avoid !important; break-inside: avoid !important; }
+      .team-card-header { background: #f1f5f9 !important; padding: 8px 10px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .team-title { font-size: 1rem !important; }
+      .team-stats-pill { font-size: 0.72rem !important; padding: 2px 6px !important; }
+      .team-card-body { padding: 8px 10px !important; }
+      .member-item { padding: 5px 0 !important; font-size: 0.85rem !important; }
+      .tag-leader { background: #fef3c7 !important; color: #b45309 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .badge-gender { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="no-print">
+      <div class="header-badge">✨ Smart Team Builder</div>
+      <h1>프로젝트 모둠 자동 편성기</h1>
+      <p>성비 균등 • 성적 균형 • 원클릭 조장 선출 & 스마트 제약 최적화</p>
+    </header>
+
+    <!-- 1. 학생 명단 관리 -->
+    <div class="card no-print">
+      <div class="card-header">
+        <h2 class="card-title">1. 학생 명단 관리</h2>
+        <span id="studentCount" style="font-size: 0.9rem; font-weight: 700; color: var(--primary);">등록된 학생: 0명</span>
+      </div>
+
+      <div class="upload-zone" onclick="document.getElementById('excelFileInput').click()">
+        <div class="upload-icon">📂</div>
+        <p>엑셀 파일(.xlsx, .xls) 또는 CSV 파일 업로드</p>
+        <small>첫 행의 <strong>[반, 번호, 이름, 성별, 성적]</strong> 헤더를 자동 판별하여 읽어옵니다.</small>
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display:none;" onchange="handleExcelUpload(event)" />
+      </div>
+
+      <div class="btn-group">
+        <button class="excel-btn" onclick="downloadSampleExcel()">📥 양식 엑셀 다운로드</button>
+        <button class="secondary" onclick="loadSampleData()">샘플 32명 채우기</button>
+        <button class="danger-btn" onclick="clearAllData()">전체 초기화</button>
+      </div>
+
+      <!-- 정렬 도구 바 -->
+      <div class="toolbar-box">
+        <span class="toolbar-label">명단 정렬:</span>
+        <button class="tool-chip active" id="sortBtnNum" onclick="sortStudents('number')">번호순</button>
+        <button class="tool-chip" id="sortBtnName" onclick="sortStudents('name')">가나다 이름순</button>
+        <button class="tool-chip" id="sortBtnScoreDesc" onclick="sortStudents('scoreDesc')">성적 높은순</button>
+        <button class="tool-chip" id="sortBtnScoreAsc" onclick="sortStudents('scoreAsc')">성적 낮은순</button>
+      </div>
+
+      <!-- 학생 직접 추가 폼 -->
+      <details style="margin-bottom: 14px;">
+        <summary style="font-size: 0.88rem; cursor: pointer; color: var(--text-sub); font-weight: 600;">학생 1명씩 직접 추가하기</summary>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 10px;">
+          <input type="text" id="inClass" placeholder="반 (예: 1)" />
+          <input type="number" id="inNum" placeholder="번호" />
+          <input type="text" id="inName" placeholder="이름" />
+          <select id="inGender">
+            <option value="남">남</option>
+            <option value="여">여</option>
+          </select>
+          <input type="number" id="inScore" placeholder="성적" />
+          <button onclick="addStudent()">추가</button>
+        </div>
+      </details>
+
+      <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px;">
+        <table class="student-table">
+          <thead>
+            <tr><th>반</th><th>번호</th><th>이름</th><th>성별</th><th>성적</th><th>수정 / 삭제</th></tr>
+          </thead>
+          <tbody id="studentTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. 조장 선출 및 지명 조원 설정 -->
+    <div class="card no-print">
+      <div class="card-header">
+        <h2 class="card-title">2. 조장 선출 및 지명 조원 설정 <span style="font-size:0.85rem; color:#ef4444; font-weight:600;">(조장 필수 지정)</span></h2>
+        <button class="toggle-btn" id="btnToggleScore" style="padding: 6px 14px; font-size: 0.82rem;" onclick="toggleScoreVisibility()">
+          🔒 학생 점수 숨기기 모드 (현재: 표시 중)
+        </button>
+      </div>
+
+      <!-- 조장 자동 선출 툴바 -->
+      <div class="toolbar-box">
+        <span class="toolbar-label">⚡ 조장 빠른 선출:</span>
+        <button class="tool-chip" onclick="autoAssignLeaders('score')">🏆 성적 최상위순 자동 배정</button>
+        <button class="tool-chip" onclick="autoAssignLeaders('name')">🔤 가나다순 자동 배정</button>
+        <button class="tool-chip" onclick="autoAssignLeaders('random')">🎲 무작위(랜덤) 자동 배정</button>
+        <button class="tool-chip danger-btn" style="border-radius: 8px;" onclick="resetAllLeaders()">🔄 조장 초기화</button>
+      </div>
+
+      <div id="leaderConfigContainer" class="leader-config-grid"></div>
+
+      <div style="margin-top: 20px;">
+        <label style="font-weight: 700; font-size: 0.92rem; display: block; margin-bottom: 6px;">
+          ⚠️ 같은 조가 되면 안 되는 학생 (고려사항)
+        </label>
+        <textarea id="avoidPairs" rows="2" placeholder="콤마로 구분하여 입력 (예: 철수, 영희 / 민수, 지호 -> 한 줄에 한 쌍씩)"></textarea>
+      </div>
+    </div>
+
+    <!-- 3. 조 편성 및 결과 확인 -->
+    <div class="card" id="printSection">
+      <div class="card-header no-print">
+        <h2 class="card-title">3. 조 편성 및 결과 확인</h2>
+      </div>
+
+      <div class="action-bar no-print">
+        <button id="btnGenerateTeam" onclick="generateTeams()">✨ 조 자동 편성하기</button>
+        <button class="excel-btn" onclick="downloadResultExcel()">📊 결과 엑셀 파일 다운로드</button>
+        <button class="secondary" onclick="printActiveView()">🖨️ 인쇄 / PDF 저장</button>
+        <button class="secondary" onclick="saveToGoogleSheets()">☁️ 구글 서버 저장</button>
+      </div>
+      <div class="action-hint no-print">
+        💡 마음에 들지 않을 경우 <strong>[✨ 조 자동 편성하기]</strong> 버튼을 다시 누르면 새로운 조합으로 다시 배치됩니다.
+      </div>
+
+      <!-- 결과 탭 -->
+      <div class="segmented-control no-print">
+        <button class="segment-btn active" id="btnTabTeacher" onclick="switchTab('teacher')">교사용 결과표 (상세)</button>
+        <button class="segment-btn" id="btnTabStudent" onclick="switchTab('student')">학생 게시용 결과표 (공지용)</button>
+      </div>
+
+      <!-- 교사용 뷰 -->
+      <div id="teacherView" class="tab-content active-print">
+        <h2 style="margin: 0 0 16px 0; font-size: 1.25rem; text-align: center;">[교사용] 모둠 편성 결과표 및 통계</h2>
+        <div id="teamsContainerTeacher" class="teams-grid">
+          <p style="color: var(--text-sub); text-align: center; grid-column: 1 / -1;">학생 명단을 입력하고 '조 자동 편성하기'를 눌러주세요.</p>
+        </div>
+      </div>
+
+      <!-- 학생 게시용 뷰 -->
+      <div id="studentView" class="tab-content" style="display: none;">
+        <h2 style="margin: 0 0 20px 0; font-size: 1.4rem; text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px;">
+          프로젝트 모둠 편성 안내
+        </h2>
+        <div id="teamsContainerStudent" class="teams-grid">
+          <p style="color: var(--text-sub); text-align: center; grid-column: 1 / -1;">학생 명단을 입력하고 '조 자동 편성하기'를 눌러주세요.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let students = [];
+    let teams = [];
+    let editingId = null;
+    let currentTab = 'teacher';
+    let currentSortMode = 'number';
+    let hideScores = false;
+
+    window.onload = function() {
+      const saved = localStorage.getItem('class_students');
+      if (saved) {
+        students = JSON.parse(saved);
+        sortStudents(currentSortMode, false);
+        renderTable();
+        updateLeaderSelectors();
+      }
+      const savedUrl = localStorage.getItem('gas_url');
+      if (savedUrl) document.getElementById('googleAppUrl').value = savedUrl;
+    };
+
+    function saveData() {
+      localStorage.setItem('class_students', JSON.stringify(students));
+    }
+
+    function sortStudents(mode, shouldSave = true) {
+      currentSortMode = mode;
+
+      ['sortBtnNum', 'sortBtnName', 'sortBtnScoreDesc', 'sortBtnScoreAsc'].forEach(id => {
+        document.getElementById(id)?.classList.remove('active');
+      });
+      if (mode === 'number') document.getElementById('sortBtnNum')?.classList.add('active');
+      if (mode === 'name') document.getElementById('sortBtnName')?.classList.add('active');
+      if (mode === 'scoreDesc') document.getElementById('sortBtnScoreDesc')?.classList.add('active');
+      if (mode === 'scoreAsc') document.getElementById('sortBtnScoreAsc')?.classList.add('active');
+
+      students.sort((a, b) => {
+        if (mode === 'number') {
+          const numA = parseInt(a.number, 10) || 9999;
+          const numB = parseInt(b.number, 10) || 9999;
+          return numA - numB;
+        } else if (mode === 'name') {
+          return a.name.localeCompare(b.name, 'ko');
+        } else if (mode === 'scoreDesc') {
+          return b.score - a.score;
+        } else if (mode === 'scoreAsc') {
+          return a.score - b.score;
+        }
+        return 0;
+      });
+
+      if (shouldSave) saveData();
+      renderTable();
+      updateLeaderSelectors();
+    }
+
+    function toggleScoreVisibility() {
+      hideScores = !hideScores;
+      const btn = document.getElementById('btnToggleScore');
+      if (hideScores) {
+        btn.textContent = '👀 학생 점수 표시 모드로 전환';
+        btn.style.backgroundColor = '#64748b';
+      } else {
+        btn.textContent = '🔒 학생 점수 숨기기 모드 (현재: 표시 중)';
+        btn.style.backgroundColor = '#f59e0b';
+      }
+      updateLeaderSelectors();
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('studentTableBody');
+      tbody.innerHTML = '';
+
+      students.forEach((st, idx) => {
+        const tr = document.createElement('tr');
+        if (editingId === st.id) {
+          tr.className = 'edit-row';
+          tr.innerHTML = `
+            <td><input type="text" id="edit_class_${st.id}" value="${st.classNum || ''}" style="width:50px;" /></td>
+            <td><input type="number" id="edit_num_${st.id}" value="${st.number || ''}" style="width:55px;" /></td>
+            <td><input type="text" id="edit_name_${st.id}" value="${st.name}" style="width:85px;" /></td>
+            <td>
+              <select id="edit_gender_${st.id}" style="width:65px;">
+                <option value="남" ${st.gender === '남' ? 'selected' : ''}>남</option>
+                <option value="여" ${st.gender === '여' ? 'selected' : ''}>여</option>
+              </select>
+            </td>
+            <td><input type="number" id="edit_score_${st.id}" value="${st.score}" style="width:65px;" /></td>
+            <td>
+              <button class="sm-btn" onclick="saveEdit(${st.id})" style="background:#10b981;">저장</button>
+              <button class="sm-btn secondary" onclick="cancelEdit()">취소</button>
+            </td>
+          `;
+        } else {
+          const displayScore = hideScores ? '***' : st.score;
+          tr.innerHTML = `
+            <td>${st.classNum || '-'}</td>
+            <td>${st.number || '-'}</td>
+            <td><strong>${st.name}</strong></td>
+            <td><span class="badge-gender ${st.gender === '남' ? 'gender-m' : 'gender-f'}">${st.gender}</span></td>
+            <td>${displayScore}</td>
+            <td>
+              <button class="sm-btn secondary" onclick="startEdit(${st.id})">수정</button>
+              <button class="sm-btn danger-btn" onclick="removeStudent(${idx})">삭제</button>
+            </td>
+          `;
+        }
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('studentCount').innerText = `등록된 학생: ${students.length}명`;
+    }
+
+    function startEdit(id) { editingId = id; renderTable(); }
+    function cancelEdit() { editingId = null; renderTable(); }
+
+    function saveEdit(id) {
+      const st = students.find(s => s.id === id);
+      if (!st) return;
+
+      const newClass = document.getElementById(`edit_class_${id}`).value.trim();
+      const newNum = document.getElementById(`edit_num_${id}`).value.trim();
+      const newName = document.getElementById(`edit_name_${id}`).value.trim();
+      const newGender = document.getElementById(`edit_gender_${id}`).value;
+      const newScore = parseFloat(document.getElementById(`edit_score_${id}`).value);
+
+      if (!newName || isNaN(newScore)) {
+        alert('이름과 성적을 올바르게 입력해주세요.');
+        return;
+      }
+
+      st.classNum = newClass;
+      st.number = newNum;
+      st.name = newName;
+      st.gender = newGender;
+      st.score = newScore;
+
+      editingId = null;
+      sortStudents(currentSortMode, true);
+    }
+
+    function removeStudent(idx) {
+      students.splice(idx, 1);
+      saveData();
+      renderTable();
+      updateLeaderSelectors();
+    }
+
+    function addStudent() {
+      const c = document.getElementById('inClass').value.trim();
+      const n = document.getElementById('inNum').value.trim();
+      const name = document.getElementById('inName').value.trim();
+      const g = document.getElementById('inGender').value;
+      const s = parseFloat(document.getElementById('inScore').value);
+
+      if (!name || isNaN(s)) {
+        alert('이름과 성적을 올바르게 입력해주세요.');
+        return;
+      }
+
+      students.push({ id: Date.now() + Math.random(), classNum: c, number: n, name: name, gender: g, score: s });
+      sortStudents(currentSortMode, true);
+
+      document.getElementById('inName').value = '';
+      document.getElementById('inScore').value = '';
+      document.getElementById('inNum').value = Number(n) ? Number(n) + 1 : '';
+    }
+
+    function clearAllData() {
+      if (confirm('현재 등록된 학생 명단을 모두 초기화하시겠습니까?')) {
+        students = [];
+        teams = [];
+        saveData();
+        renderTable();
+        updateLeaderSelectors();
+        renderResults();
+      }
+    }
+
+    function handleExcelUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+          if (rawRows.length === 0) {
+            alert('엑셀 시트에 데이터가 없습니다.');
+            return;
+          }
+
+          let parsedList = [];
+          rawRows.forEach((row, idx) => {
+            let classNum = row['반'] ?? row['학급'] ?? '';
+            let num = row['번호'] ?? row['학번'] ?? (idx + 1);
+            let name = row['이름'] ?? row['성명'] ?? '';
+            let gender = row['성별'] ?? '';
+            let score = row['성적'] ?? row['점수'] ?? 0;
+
+            if (name) {
+              gender = String(gender).trim();
+              if (['남자', '남', 'm', 'M'].includes(gender)) gender = '남';
+              else if (['여자', '여', 'f', 'F'].includes(gender)) gender = '여';
+              else gender = '남';
+
+              parsedList.push({
+                id: Date.now() + Math.random(),
+                classNum: String(classNum).trim(),
+                number: String(num).trim(),
+                name: String(name).trim(),
+                gender: gender,
+                score: parseFloat(score) || 0
+              });
+            }
+          });
+
+          students = parsedList;
+          sortStudents('number', true);
+          alert(`총 ${students.length}명의 학생 데이터를 성공적으로 불러왔습니다!`);
+        } catch (err) {
+          alert('엑셀 읽기 오류: ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+      e.target.value = '';
+    }
+
+    function downloadSampleExcel() {
+      const sample = [
+        { "반": "1", "번호": 1, "이름": "김민수", "성별": "남", "성적": 85 },
+        { "반": "1", "번호": 2, "이름": "이지은", "성별": "여", "성적": 92 },
+        { "반": "1", "번호": 3, "이름": "박서준", "성별": "남", "성적": 78 },
+        { "반": "1", "번호": 4, "이름": "최유진", "성별": "여", "성적": 88 }
+      ];
+      const ws = XLSX.utils.json_to_sheet(sample);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "학생명단양식");
+      XLSX.writeFile(wb, "조편성_학생명단_양식.xlsx");
+    }
+
+    function downloadResultExcel() {
+      if (teams.length === 0) {
+        alert('먼저 조 편성을 완료해주세요.');
+        return;
+      }
+
+      const currentClass = students.find(s => s.classNum)?.classNum || "1";
+
+      const teacherRows = [];
+      teams.forEach((team, idx) => {
+        const teamScoreAvg = (team.reduce((acc, m) => acc + m.score, 0) / (team.length || 1)).toFixed(1);
+        team.forEach(m => {
+          const roleText = m.role === 'leader' ? '조장' : (m.role === 'pick' ? '지명' : '조원');
+          teacherRows.push({
+            "모둠": `${idx + 1}조`,
+            "모둠평균": `${teamScoreAvg}점`,
+            "번호": m.number ? `${m.number}번` : '',
+            "이름": m.name,
+            "역할": roleText,
+            "성별": m.gender,
+            "성적": m.score
+          });
+        });
+      });
+
+      const studentRows = [];
+      teams.forEach((team, idx) => {
+        const sortedMembers = [...team].sort((a, b) => {
+          if (a.role === 'leader') return -1;
+          if (b.role === 'leader') return 1;
+          return (parseInt(a.number, 10) || 0) - (parseInt(b.number, 10) || 0);
+        });
+
+        sortedMembers.forEach(m => {
+          studentRows.push({
+            "모둠": `${idx + 1} 모둠`,
+            "번호": m.number ? `${m.number}번` : '',
+            "이름": m.name,
+            "성별": m.gender,
+            "역할": m.role === 'leader' ? '조장' : ''
+          });
+        });
+      });
+
+      const wb = XLSX.utils.book_new();
+      const wsTeacher = XLSX.utils.json_to_sheet(teacherRows);
+      const wsStudent = XLSX.utils.json_to_sheet(studentRows);
+
+      XLSX.utils.book_append_sheet(wb, wsTeacher, "교사용_상세결과");
+      XLSX.utils.book_append_sheet(wb, wsStudent, "학생공지용_결과");
+
+      XLSX.writeFile(wb, `${currentClass}반_모둠편성결과.xlsx`);
+    }
+
+    function getTeamSizes(total) {
+      if (total === 0) return [];
+      const numTeams = Math.ceil(total / 4);
+      let sizes = new Array(numTeams).fill(4);
+      let remainder = (numTeams * 4) - total;
+      for (let i = 0; i < remainder; i++) {
+        sizes[sizes.length - 1 - i] = 3;
+      }
+      return sizes;
+    }
+
+    function updateLeaderSelectors() {
+      const container = document.getElementById('leaderConfigContainer');
+      const sizes = getTeamSizes(students.length);
+
+      const prevSelections = {};
+      sizes.forEach((_, i) => {
+        prevSelections[`leader_${i}`] = document.getElementById(`leader_${i}`)?.value || '';
+        prevSelections[`pick_${i}`] = document.getElementById(`pick_${i}`)?.value || '';
+      });
+
+      container.innerHTML = '';
+      sizes.forEach((size, i) => {
+        const box = document.createElement('div');
+        box.id = `leader_box_${i}`;
+        box.className = 'leader-box';
+
+        const buildOptionText = (s) => {
+          if (hideScores) return `${s.name} (${s.number}번/${s.gender})`;
+          return `${s.name} (${s.number}번/${s.gender}/${s.score}점)`;
+        };
+
+        box.innerHTML = `
+          <h4>
+            <span>제 ${i + 1} 조</span>
+            <span style="font-size:0.75rem; color:var(--text-sub);">${size}명 정원</span>
+          </h4>
+          <label><span style="color:#ef4444; font-weight:bold;">*</span> 조장 선택 (필수):</label>
+          <select id="leader_${i}" data-role="leader" data-team="${i}" onchange="onLeaderChange(${i})">
+            <option value="">-- 조장 선택 (필수) --</option>
+            ${students.map(s => `<option value="${s.name}">${buildOptionText(s)}</option>`).join('')}
+          </select>
+          <label>조장이 뽑은 조원 (선택 사항):</label>
+          <select id="pick_${i}" data-role="pick" data-team="${i}" onchange="refreshSelectDisables()">
+            <option value="">-- 조원 선택 안 함 --</option>
+            ${students.map(s => `<option value="${s.name}">${buildOptionText(s)}</option>`).join('')}
+          </select>
+        `;
+        container.appendChild(box);
+      });
+
+      sizes.forEach((_, i) => {
+        if (prevSelections[`leader_${i}`]) document.getElementById(`leader_${i}`).value = prevSelections[`leader_${i}`];
+        if (prevSelections[`pick_${i}`]) document.getElementById(`pick_${i}`).value = prevSelections[`pick_${i}`];
+      });
+
+      refreshSelectDisables();
+    }
+
+    function onLeaderChange(teamIdx) {
+      const box = document.getElementById(`leader_box_${teamIdx}`);
+      const sel = document.getElementById(`leader_${teamIdx}`);
+      if (sel && sel.value && box) {
+        box.classList.remove('error-highlight');
+      }
+      refreshSelectDisables();
+    }
+
+    function autoAssignLeaders(criteria) {
+      if (students.length === 0) {
+        alert('학생 명단을 먼저 불러와주세요.');
+        return;
+      }
+
+      const teamSizes = getTeamSizes(students.length);
+      const numTeams = teamSizes.length;
+
+      if (students.length < numTeams) {
+        alert('학생 수가 조의 개수보다 적습니다.');
+        return;
+      }
+
+      let candidatePool = [...students];
+
+      if (criteria === 'score') {
+        candidatePool.sort((a, b) => b.score - a.score);
+      } else if (criteria === 'name') {
+        candidatePool.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+      } else if (criteria === 'random') {
+        for (let i = candidatePool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [candidatePool[i], candidatePool[j]] = [candidatePool[j], candidatePool[i]];
+        }
+      }
+
+      for (let i = 0; i < numTeams; i++) {
+        const selLeader = document.getElementById(`leader_${i}`);
+        const box = document.getElementById(`leader_box_${i}`);
+        if (selLeader && candidatePool[i]) {
+          selLeader.value = candidatePool[i].name;
+          if (box) box.classList.remove('error-highlight');
+        }
+      }
+
+      refreshSelectDisables();
+    }
+
+    function resetAllLeaders() {
+      const teamSizes = getTeamSizes(students.length);
+      teamSizes.forEach((_, i) => {
+        const selLeader = document.getElementById(`leader_${i}`);
+        if (selLeader) selLeader.value = '';
+      });
+      refreshSelectDisables();
+    }
+
+    function refreshSelectDisables() {
+      const selects = document.querySelectorAll('#leaderConfigContainer select');
+      const chosenMap = new Map();
+
+      selects.forEach(sel => {
+        if (sel.value) chosenMap.set(sel.value, sel.id);
+      });
+
+      selects.forEach(sel => {
+        Array.from(sel.options).forEach(opt => {
+          if (!opt.value) return;
+          const isChosenElsewhere = chosenMap.has(opt.value) && chosenMap.get(opt.value) !== sel.id;
+          
+          if (isChosenElsewhere) {
+            opt.disabled = true;
+            if (!opt.text.includes('[선택완료]')) {
+              opt.text = opt.text.replace(/ \(선택완료\)/g, '') + ' (선택완료)';
+            }
+          } else {
+            opt.disabled = false;
+            opt.text = opt.text.replace(' (선택완료)', '');
+          }
+        });
+      });
+    }
+
+    // --- 조 편성 실행 (조장 필수 체크 포함) ---
+    function generateTeams() {
+      if (students.length === 0) {
+        alert('학생 명단을 먼저 등록해주세요.');
+        return;
+      }
+
+      const teamSizes = getTeamSizes(students.length);
+      const numTeams = teamSizes.length;
+
+      // ★ 핵심 검증: 모든 조의 조장이 지정되었는지 전수 검사
+      let missingLeaderTeams = [];
+      for (let i = 0; i < numTeams; i++) {
+        const lName = document.getElementById(`leader_${i}`)?.value;
+        const box = document.getElementById(`leader_box_${i}`);
+        if (!lName) {
+          missingLeaderTeams.push(i + 1);
+          if (box) box.classList.add('error-highlight');
+        } else {
+          if (box) box.classList.remove('error-highlight');
+        }
+      }
+
+      if (missingLeaderTeams.length > 0) {
+        alert(`⚠️ 조장이 아직 지정되지 않은 조가 있습니다!\n\n미지정 조: [ ${missingLeaderTeams.join('조, ')}조 ]\n\n모든 조의 조장을 선택하거나, 상단의 [조장 빠른 선출] 버튼을 이용해 조장을 배정한 후 다시 시도해주세요.`);
+        
+        // 첫 번째 누락된 조 위치로 화면 스크롤
+        const firstMissingBox = document.getElementById(`leader_box_${missingLeaderTeams[0] - 1}`);
+        if (firstMissingBox) {
+          firstMissingBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      const fixedTeamMembers = Array.from({ length: numTeams }, () => []);
+      const assignedNames = new Set();
+
+      for (let i = 0; i < numTeams; i++) {
+        const lName = document.getElementById(`leader_${i}`)?.value;
+        const pName = document.getElementById(`pick_${i}`)?.value;
+
+        if (lName) {
+          const s = students.find(st => st.name === lName);
+          if (s) {
+            fixedTeamMembers[i].push({ ...s, role: 'leader' });
+            assignedNames.add(lName);
+          }
+        }
+        if (pName) {
+          const s = students.find(st => st.name === pName);
+          if (s) {
+            fixedTeamMembers[i].push({ ...s, role: 'pick' });
+            assignedNames.add(pName);
+          }
+        }
+      }
+
+      const avoidInput = document.getElementById('avoidPairs').value;
+      const avoidPairs = avoidInput
+        .split('\n')
+        .map(line => line.split(',').map(s => s.trim()).filter(Boolean))
+        .filter(pair => pair.length >= 2);
+
+      const unassignedStudents = students.filter(s => !assignedNames.has(s.name));
+
+      let bestTeams = null;
+      let bestScore = Infinity;
+
+      for (let iter = 0; iter < 1000; iter++) {
+        let currentTeams = fixedTeamMembers.map(t => [...t]);
+        let pool = [...unassignedStudents];
+
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+
+        for (let s of pool) {
+          let candidateTeams = [];
+          for (let ti = 0; ti < numTeams; ti++) {
+            if (currentTeams[ti].length < teamSizes[ti]) {
+              candidateTeams.push(ti);
+            }
+          }
+          if (candidateTeams.length === 0) break;
+
+          candidateTeams.sort((a, b) => {
+            const countA = currentTeams[a].filter(m => m.gender === s.gender).length;
+            const countB = currentTeams[b].filter(m => m.gender === s.gender).length;
+            return countA - countB;
+          });
+
+          currentTeams[candidateTeams[0]].push({ ...s, role: 'member' });
+        }
+
+        let hasConflict = false;
+        for (let pair of avoidPairs) {
+          for (let team of currentTeams) {
+            const teamNames = team.map(m => m.name);
+            if (pair.filter(p => teamNames.includes(p)).length >= 2) {
+              hasConflict = true;
+              break;
+            }
+          }
+          if (hasConflict) break;
+        }
+
+        const teamAverages = currentTeams.map(team => {
+          if (team.length === 0) return 0;
+          return team.reduce((acc, cur) => acc + cur.score, 0) / team.length;
+        });
+        const overallAvg = teamAverages.reduce((a, b) => a + b, 0) / numTeams;
+        const scoreStdDev = Math.sqrt(teamAverages.reduce((acc, val) => acc + Math.pow(val - overallAvg, 2), 0) / numTeams);
+
+        let genderPenalty = 0;
+        currentTeams.forEach(t => {
+          const mCount = t.filter(m => m.gender === '남').length;
+          const fCount = t.filter(m => m.gender === '여').length;
+          genderPenalty += Math.abs(mCount - fCount);
+        });
+
+        let totalPenalty = (hasConflict ? 50000 : 0) + (scoreStdDev * 2) + (genderPenalty * 0.5);
+
+        if (totalPenalty < bestScore) {
+          bestScore = totalPenalty;
+          bestTeams = currentTeams;
+          if (!hasConflict && scoreStdDev < 0.8) break;
+        }
+      }
+
+      teams = bestTeams;
+      renderResults();
+
+      // 결과 영역으로 부드럽게 스크롤
+      document.getElementById('printSection')?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderResults() {
+      renderTeacherView();
+      renderStudentView();
+    }
+
+    function renderTeacherView() {
+      const container = document.getElementById('teamsContainerTeacher');
+      container.innerHTML = '';
+
+      if (teams.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-sub); text-align: center; grid-column: 1 / -1;">학생 명단을 입력하고 조 편성을 시작하세요.</p>';
+        return;
+      }
+
+      teams.forEach((team, idx) => {
+        const teamScoreAvg = (team.reduce((acc, m) => acc + m.score, 0) / (team.length || 1)).toFixed(1);
+        const mCount = team.filter(m => m.gender === '남').length;
+        const fCount = team.filter(m => m.gender === '여').length;
+
+        const card = document.createElement('div');
+        card.className = 'team-card';
+        card.innerHTML = `
+          <div class="team-card-header">
+            <h3 class="team-title">${idx + 1}조</h3>
+            <div class="team-stats-pill">평균 ${teamScoreAvg}점 • 남${mCount} 여${fCount}</div>
+          </div>
+          <div class="team-card-body">
+            ${team.map(m => `
+              <div class="member-item">
+                <span>
+                  <strong>${m.name}</strong> 
+                  <span style="font-size:0.8rem; color:#64748b;">(${m.number}번)</span>
+                  <span class="badge-gender ${m.gender === '남' ? 'gender-m' : 'gender-f'}">${m.gender}</span>${m.role === 'leader' ? '<span class="tag tag-leader">조장</span>' : ''}
+                  ${m.role === 'pick' ? '<span class="tag tag-pick">지명</span>' : ''}
+                </span>
+                <span style="font-weight:700; color:var(--text-sub);">${m.score}점</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderStudentView() {
+      const container = document.getElementById('teamsContainerStudent');
+      container.innerHTML = '';
+
+      if (teams.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-sub); text-align: center; grid-column: 1 / -1;">학생 명단을 입력하고 조 편성을 시작하세요.</p>';
+        return;
+      }
+
+      teams.forEach((team, idx) => {
+        const sortedMembers = [...team].sort((a, b) => {
+          if (a.role === 'leader') return -1;
+          if (b.role === 'leader') return 1;
+          return (parseInt(a.number, 10) || 0) - (parseInt(b.number, 10) || 0);
+        });
+
+        const card = document.createElement('div');
+        card.className = 'team-card';
+        card.innerHTML = `
+          <div class="team-card-header" style="background:#eef2ff;">
+            <h3 class="team-title" style="font-size:1.15rem; color:#3730a3;">제 ${idx + 1} 모둠</h3>
+            <span class="team-stats-pill" style="font-weight:700;">${team.length}명</span>
+          </div>
+          <div class="team-card-body">
+            ${sortedMembers.map(m => `
+              <div class="member-item" style="padding: 10px 0;">
+                <span style="font-size: 0.98rem;">
+                  <strong>${m.name}</strong>
+                  <span style="font-size:0.85rem; color:#64748b; margin-left:2px;">(${m.number}번)</span>
+                  <span class="badge-gender ${m.gender === '남' ? 'gender-m' : 'gender-f'}" style="margin-left:4px;">${m.gender}</span>
+                </span>
+                <div>
+                  ${m.role === 'leader' ? '<span class="tag tag-leader" style="padding:3px 8px; font-size:0.8rem;">조장</span>' : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      const tView = document.getElementById('teacherView');
+      const sView = document.getElementById('studentView');
+      const tBtn = document.getElementById('btnTabTeacher');
+      const sBtn = document.getElementById('btnTabStudent');
+
+      if (tab === 'teacher') {
+        tView.style.display = 'block';
+        sView.style.display = 'none';
+        tView.classList.add('active-print');
+        sView.classList.remove('active-print');
+        tBtn.classList.add('active');
+        sBtn.classList.remove('active');
+      } else {
+        tView.style.display = 'none';
+        sView.style.display = 'block';
+        sView.classList.add('active-print');
+        tView.classList.remove('active-print');
+        sBtn.classList.add('active');
+        tBtn.classList.remove('active');
+      }
+    }
+
+    function printActiveView() {
+      if (teams.length === 0) {
+        alert('조 편성을 먼저 진행한 후 인쇄해주세요.');
+        return;
+      }
+      window.print();
+    }
+
+    function saveToGoogleSheets() {
+      const url = document.getElementById('googleAppUrl').value.trim();
+      if (!url) {
+        alert('구글 앱스스크립트 Web App URL을 설정란에 입력해주세요.');
+        return;
+      }
+      if (teams.length === 0) {
+        alert('먼저 조 편성을 완료해주세요.');
+        return;
+      }
+
+      localStorage.setItem('gas_url', url);
+      const currentClass = students.find(s => s.classNum)?.classNum || "1";
+
+      const payload = {
+        className: currentClass,
+        timestamp: new Date().toLocaleString(),
+        teams: teams.map((team, idx) => ({
+          teamNumber: idx + 1,
+          members: team.map(m => ({
+            number: m.number,
+            name: m.name,
+            gender: m.gender,
+            score: m.score,
+            role: m.role
+          }))
+        }))
+      };
+
+      fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(() => alert(`[${currentClass}반] 조 편성 결과가 구글 시트 탭으로 저장되었습니다!`))
+      .catch(err => alert('전송 실패: ' + err.message));
+    }
+
+    function loadSampleData() {
+      const names = [
+        "강민준","김서준","이도윤","박예준","정시우","최하준","조주원","윤지호","장지후","임준서",
+        "한유준","오건우","서도현","신서진","권지원","황우진","김이지","이지민","박서연","정서윤",
+        "최지우","조하은","윤하윤","장민서","임지유","한채원","오수아","서다은","신예린","김민서",
+        "황소율","송채은"
+      ];
+      students = names.map((name, i) => ({
+        id: i + 1,
+        classNum: "1",
+        number: String(i + 1),
+        name: name,
+        gender: i < 16 ? "남" : "여",
+        score: Math.floor(Math.random() * 41) + 60
+      }));
+      sortStudents(currentSortMode, true);
+    }
+  </script>
+</body>
+</html>
